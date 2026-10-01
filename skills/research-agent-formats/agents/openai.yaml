@@ -1,0 +1,4 @@
+interface:
+  display_name: "Research Agent Formats"
+  short_description: "Ground parser decisions in sourced conventions"
+  default_prompt: "Use $research-agent-formats to research and document this proposed AgentStudio format behavior."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Develop Native Scanner"
+  short_description: "Build safe Rust discovery and parsing behavior"
+  default_prompt: "Use $develop-native-scanner to implement and test this AgentStudio native scanning change."

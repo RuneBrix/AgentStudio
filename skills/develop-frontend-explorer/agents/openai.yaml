@@ -1,0 +1,4 @@
+interface:
+  display_name: "Develop Frontend Explorer"
+  short_description: "Build AgentStudio's accessible React explorer"
+  default_prompt: "Use $develop-frontend-explorer to implement and verify this AgentStudio interface change."

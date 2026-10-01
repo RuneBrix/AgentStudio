@@ -1,4 +1,4 @@
-import { ChevronRight, FileText, Sparkles } from "lucide-react";
+import { ChevronRight, FileKey2, Folder, Sparkles } from "lucide-react";
 import type { AgentNode, SkillDefinition } from "../model";
 
 interface Props {
@@ -7,45 +7,51 @@ interface Props {
   onSelect: (agent: AgentNode) => void;
 }
 
+function scopeLabel(agent: AgentNode): string {
+  if (agent.scope === ".") return "Project root";
+  return agent.scope.split("/").at(-1) ?? agent.scope;
+}
+
 function SkillRow({ skill }: { skill: SkillDefinition }) {
   return (
     <div className="skill-row" title={skill.relativePath}>
-      <Sparkles size={14} strokeWidth={1.8} />
+      <Sparkles size={13} strokeWidth={1.8} />
       <span>{skill.name}</span>
       {skill.diagnostics.length > 0 && <span className="warning-dot" title={skill.diagnostics.join("\n")} />}
     </div>
   );
 }
 
-function AgentBranch({ agent, depth, selectedId, onSelect }: Props & { agent: AgentNode; depth: number }) {
+function ScopeBranch({ agent, depth, selectedId, onSelect }: Omit<Props, "agents"> & { agent: AgentNode; depth: number }) {
   return (
-    <div className="agent-branch">
+    <div className="scope-branch" role="treeitem" aria-expanded="true">
+      <div className="scope-row" style={{ paddingLeft: `${14 + depth * 18}px` }}>
+        <ChevronRight className="branch-chevron" size={13} />
+        <Folder size={15} fill="currentColor" />
+        <span>{scopeLabel(agent)}</span>
+        <code>{agent.scope}</code>
+      </div>
       <button
-        className={`agent-row ${selectedId === agent.id ? "selected" : ""}`}
-        style={{ paddingLeft: `${16 + depth * 20}px` }}
+        className={`instruction-row ${selectedId === agent.id ? "selected" : ""}`}
+        style={{ paddingLeft: `${43 + depth * 18}px` }}
         onClick={() => onSelect(agent)}
       >
-        <ChevronRight className="branch-chevron" size={14} />
-        <span className={`agent-glyph ${agent.fileKind === "override" ? "override" : ""}`}>
-          <FileText size={14} strokeWidth={1.8} />
+        <span className={`instruction-glyph ${agent.fileKind === "override" ? "override" : ""}`}>
+          <FileKey2 size={14} strokeWidth={1.8} />
         </span>
-        <span className="agent-label">{agent.name}</span>
-        {agent.fileKind === "override" && <span className="mini-badge">override</span>}
+        <span className="instruction-copy">
+          <strong>{agent.relativePath.split("/").at(-1)}</strong>
+          <span>{agent.summary}</span>
+        </span>
+        {agent.relationship && <span className="inferred-badge">inferred</span>}
       </button>
-      {agent.skills.map((skill) => (
-        <div key={skill.id} style={{ paddingLeft: `${50 + depth * 20}px` }}>
-          <SkillRow skill={skill} />
+      {agent.skills.length > 0 && (
+        <div className="scope-skills" style={{ paddingLeft: `${65 + depth * 18}px` }}>
+          {agent.skills.map((skill) => <SkillRow key={skill.id} skill={skill} />)}
         </div>
-      ))}
+      )}
       {agent.children.map((child) => (
-        <AgentBranch
-          key={child.id}
-          agent={child}
-          depth={depth + 1}
-          agents={[]}
-          selectedId={selectedId}
-          onSelect={onSelect}
-        />
+        <ScopeBranch key={child.id} agent={child} depth={depth + 1} selectedId={selectedId} onSelect={onSelect} />
       ))}
     </div>
   );
@@ -53,16 +59,9 @@ function AgentBranch({ agent, depth, selectedId, onSelect }: Props & { agent: Ag
 
 export function AgentExplorer({ agents, selectedId, onSelect }: Props) {
   return (
-    <div className="tree" role="tree" aria-label="Agent hierarchy">
+    <div className="tree" role="tree" aria-label="Project instruction scopes">
       {agents.map((agent) => (
-        <AgentBranch
-          key={agent.id}
-          agent={agent}
-          depth={0}
-          agents={agents}
-          selectedId={selectedId}
-          onSelect={onSelect}
-        />
+        <ScopeBranch key={agent.id} agent={agent} depth={0} selectedId={selectedId} onSelect={onSelect} />
       ))}
     </div>
   );

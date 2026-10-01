@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maintain Project Guidance"
+  short_description: "Keep docs, AGENTS, and skills aligned with code"
+  default_prompt: "Use $maintain-project-guidance to reconcile AgentStudio documentation and guidance with this change."

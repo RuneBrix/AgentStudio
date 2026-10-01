@@ -23,7 +23,7 @@ version-neutral ProjectScan DTO
 React explorer + read-only source detail
 ```
 
-The native boundary owns filesystem access. React receives serializable data and does not receive a broad filesystem capability. No write command exists in the MVP.
+The native boundary owns filesystem access. React receives serializable data and does not receive a broad filesystem capability. It stores only the user's project list and active project path in browser-local application storage; reopening a saved project still goes through `scan_project`. Scan snapshots remain in memory and can be refreshed explicitly. No write command exists in the MVP.
 
 ## Core model
 
@@ -35,7 +35,7 @@ The native boundary owns filesystem access. React receives serializable data and
 - `diagnostics` reports recoverable filesystem errors;
 - `scannedFiles` supports basic scan feedback.
 
-`AgentNode` represents an instruction source, not a running AI agent. It preserves `rawContent`, has a filesystem `scope`, contains associated skills and child nodes, and records the evidence behind its parent relationship.
+`AgentNode` represents an instruction source, not a running AI agent. It preserves `rawContent`, has a filesystem `scope`, contains associated skills and child nodes, and records the evidence behind its parent relationship. The React explorer presents these records as instruction files within folder scopes; that presentation does not add new filesystem facts to the DTO.
 
 `SkillDefinition` preserves its raw file and all YAML front matter as an open object. Known fields are projected into `name` and `description`; unknown fields remain available for future adapters.
 
@@ -71,5 +71,7 @@ Editing must start from the original bytes/text and apply the smallest user-appr
 - Rust performs discovery because it is the trusted native boundary and can later support safe writes.
 - Raw source is first-class because round-trip preservation is a product requirement.
 - Summaries are deterministic local extracts, not AI-generated text. This keeps scans private, fast, and reproducible.
+- Markdown rendering is a read-only presentation of `rawContent`; the source view remains available and raw HTML is not enabled.
+- Saved project entries contain local paths and display names only. Removing one from the sidebar does not delete or modify its directory.
 - Generated/dependency folders (`.git`, `node_modules`, `target`, `.next`, `dist`) are skipped. Configurable ignore rules are deferred.
 - Symlinks are not followed, preventing accidental traversal outside the selected project and cycles.
