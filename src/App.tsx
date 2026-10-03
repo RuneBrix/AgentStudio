@@ -13,6 +13,7 @@ import { scanProject } from "./api";
 import { AgentExplorer } from "./components/AgentExplorer";
 import { InstructionDocument } from "./components/InstructionDocument";
 import { ProjectSidebar, type SavedProject } from "./components/ProjectSidebar";
+import { UpdateNotice } from "./components/UpdateNotice";
 import type { AgentNode, ProjectScan } from "./model";
 
 const PROJECTS_KEY = "agent-studio.projects.v1";
@@ -189,6 +190,7 @@ export default function App() {
   if (projects.length === 0) {
     return (
       <main className="welcome-shell">
+        <UpdateNotice />
         <div className="brand-mark"><Network size={29} /></div>
         <p className="eyebrow">AgentStudio</p>
         <h1>Understand the instructions<br />behind your project.</h1>
@@ -205,6 +207,7 @@ export default function App() {
 
   return (
     <main className={`app-layout ${isSidebarOpen ? "" : "sidebar-collapsed"} ${isResizing ? "is-resizing" : ""}`}>
+      <UpdateNotice />
       <ProjectSidebar
         projects={projects}
         activeRoot={activeRoot}

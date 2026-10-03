@@ -19,6 +19,7 @@ The smallest useful product is a trustworthy read-only map of project instructio
 - parsing for `AGENTS.md`, `AGENTS.override.md`, and `SKILL.md`;
 - deterministic summary extraction;
 - scope-oriented React explorer with an adjustable split view, rendered Markdown, and raw-source modes;
+- startup update checks with explicit, signed update installation from GitHub Releases;
 - Rust unit tests for discovery, hierarchy, front matter, ignore behavior, and summaries.
 
 ## Explicitly deferred
@@ -29,7 +30,7 @@ The smallest useful product is a trustworthy read-only map of project instructio
 - explicit relationship schemas;
 - user-configurable ignore patterns, fallback names, themes, and layout;
 - file watching and incremental rescans;
-- cloud services, telemetry, or AI-generated summaries.
+- application-data cloud services, telemetry, or AI-generated summaries.
 
 ## Acceptance criteria
 
@@ -39,3 +40,4 @@ The smallest useful product is a trustworthy read-only map of project instructio
 - Valid skill `name`/`description` metadata is displayed; malformed metadata produces diagnostics and a usable fallback record.
 - One unreadable or malformed source does not discard other results.
 - Parser and discovery tests run without the desktop UI.
+- A failed update check does not prevent local project use, and installing an available update requires explicit user action.

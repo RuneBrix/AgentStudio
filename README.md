@@ -13,7 +13,8 @@ Supported in the first slice:
 - a collapsible, persistent local project sidebar with add, remove, switch, and rescan actions;
 - an adjustable split view between project structure and instruction content;
 - rendered Markdown guidance with an explicit read-only source view;
-- non-fatal parse diagnostics.
+- non-fatal parse diagnostics;
+- signed update checks against public GitHub Releases, with user-controlled installation.
 
 Editing, deletion, graph visualization, and configuration are intentionally deferred. See [docs/MVP.md](docs/MVP.md).
 
@@ -34,9 +35,15 @@ cargo test --manifest-path src-tauri/Cargo.toml
 npm run build
 ```
 
+## Releases and updates
+
+The installed app checks `RuneBrix/AgentStudio` GitHub Releases once at startup. A failed check is silent; when a newer signed version exists, the app offers to install it and restart. Project paths and scan results are never sent with this request.
+
+Before the first release, add the ignored `.tauri/agentstudio.key` file contents as the repository secret `TAURI_SIGNING_PRIVATE_KEY`. Keep a secure backup: existing installations cannot trust future updates if the key is lost. Then update the matching versions in `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json`, commit them, and push a matching tag such as `v0.2.0`. The release workflow builds a Windows NSIS installer and a draft GitHub Release; publishing that draft makes its generated `latest.json` available to installed apps.
+
 ## Safety posture
 
-The current application exposes one Rust command, `scan_project`. It canonicalizes and reads the selected directory but has no write command. UI copy must not imply that an inferred relationship was declared by the source files.
+The current application exposes one project-data command, `scan_project`. It canonicalizes and reads the selected directory but has no project write command. The updater can replace the installed application only after Tauri verifies the release signature and the user chooses to install it. UI copy must not imply that an inferred relationship was declared by the source files.
 
 ## Project documents
 

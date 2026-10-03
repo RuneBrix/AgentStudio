@@ -26,7 +26,8 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -34,5 +35,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaW5pIHB1YmxpYyBrZXk6IDg3RDdBQTMwNjAxOTU5RjMKUldUeldSbGdNS3JYaDZ6SldGZVl0NndHTUtLMytaUEZOR0Z5NHoydXFJdGZGaXgwR3RjZGM0bC8K",
+      "endpoints": [
+        "https://github.com/RuneBrix/AgentStudio/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

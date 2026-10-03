@@ -3,5 +3,10 @@
   "identifier": "default",
   "description": "Default desktop capability for AgentStudio",
   "windows": ["main"],
-  "permissions": ["core:default", "dialog:allow-open"]
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    "process:allow-restart",
+    "updater:default"
+  ]
 }

@@ -2,6 +2,7 @@
 /dist
 /src-tauri/target
 /src-tauri/gen
+/.tauri
 *.log
 .DS_Store
 Thumbs.db

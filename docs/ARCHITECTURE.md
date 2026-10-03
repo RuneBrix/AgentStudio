@@ -25,6 +25,8 @@ React explorer + read-only source detail
 
 The native boundary owns filesystem access. React receives serializable data and does not receive a broad filesystem capability. It stores only the user's project list and active project path in browser-local application storage; reopening a saved project still goes through `scan_project`. Scan snapshots remain in memory and can be refreshed explicitly. No write command exists in the MVP.
 
+Software distribution is separate from project scanning. On startup, Tauri's updater requests the static `latest.json` attached to the newest public GitHub Release. The React layer displays an available version and starts installation only after an explicit user action. Tauri verifies the downloaded NSIS installer with the embedded updater public key before replacing the application. Update-check failures do not block local use, and no project data is included in the request.
+
 ## Core model
 
 `ProjectScan` is a scan snapshot:
@@ -75,3 +77,5 @@ Editing must start from the original bytes/text and apply the smallest user-appr
 - Saved project entries contain local paths and display names only. Removing one from the sidebar does not delete or modify its directory.
 - Generated/dependency folders (`.git`, `node_modules`, `target`, `.next`, `dist`) are skipped. Configurable ignore rules are deferred.
 - Symlinks are not followed, preventing accidental traversal outside the selected project and cycles.
+- GitHub Releases is the update CDN. A static signed manifest avoids an application server, database, account system, or runtime secret.
+- Windows NSIS is the sole release target until another supported desktop platform is intentionally added.
