@@ -45,7 +45,6 @@ pub struct AgentNode {
     name: String,
     relative_path: String,
     scope: String,
-    summary: String,
     raw_content: String,
     file_kind: AgentFileKind,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -71,6 +70,22 @@ pub struct ScanDiagnostic {
     message: String,
 }
 
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectEntry {
+    relative_path: String,
+    kind: ProjectEntryKind,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    markdown_content: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+enum ProjectEntryKind {
+    Directory,
+    File,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "lowercase")]
 enum DiagnosticSeverity {
@@ -85,6 +100,7 @@ pub struct ProjectScan {
     agents: Vec<AgentNode>,
     unscoped_skills: Vec<SkillDefinition>,
     diagnostics: Vec<ScanDiagnostic>,
+    project_entries: Vec<ProjectEntry>,
     scanned_files: usize,
 }
 
@@ -106,6 +122,7 @@ pub fn scan_project(root: &Path) -> io::Result<ProjectScan> {
     let mut agents = Vec::new();
     let mut skills = Vec::new();
     let mut diagnostics = Vec::new();
+    let mut project_entries = Vec::new();
 
     let walker = WalkDir::new(&root)
         .follow_links(false)
@@ -127,6 +144,22 @@ pub fn scan_project(root: &Path) -> io::Result<ProjectScan> {
                 continue;
             }
         };
+        if entry.depth() > 0 {
+            let kind = if entry.file_type().is_dir() {
+                Some(ProjectEntryKind::Directory)
+            } else if entry.file_type().is_file() {
+                Some(ProjectEntryKind::File)
+            } else {
+                None
+            };
+            if let Some(kind) = kind {
+                project_entries.push(ProjectEntry {
+                    relative_path: relative_display(&root, entry.path()),
+                    kind,
+                    markdown_content: None,
+                });
+            }
+        }
         if !entry.file_type().is_file() {
             continue;
         }
@@ -142,6 +175,19 @@ pub fn scan_project(root: &Path) -> io::Result<ProjectScan> {
                 Ok(skill) => skills.push(skill),
                 Err(error) => diagnostics.push(read_diagnostic(&root, entry.path(), error)),
             }
+        } else if entry
+            .path()
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("md"))
+        {
+            match fs::read_to_string(entry.path()) {
+                Ok(content) => {
+                    if let Some(project_entry) = project_entries.last_mut() {
+                        project_entry.markdown_content = Some(content);
+                    }
+                }
+                Err(error) => diagnostics.push(read_diagnostic(&root, entry.path(), error)),
+            }
         }
     }
 
@@ -153,6 +199,7 @@ pub fn scan_project(root: &Path) -> io::Result<ProjectScan> {
             .then(left.node.relative_path.cmp(&right.node.relative_path))
     });
     skills.sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
+    project_entries.sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
 
     let scanned_files = agents.len() + skills.len();
     let (agent_tree, unscoped_skills) = build_tree(agents, skills);
@@ -167,6 +214,7 @@ pub fn scan_project(root: &Path) -> io::Result<ProjectScan> {
         agents: agent_tree,
         unscoped_skills,
         diagnostics,
+        project_entries,
         scanned_files,
     })
 }
@@ -208,7 +256,6 @@ fn parse_agent(root: &Path, path: &Path, is_override: bool) -> io::Result<FlatAg
             name,
             relative_path,
             scope: display_scope,
-            summary: summarize_markdown(&raw_content),
             raw_content,
             file_kind: if is_override {
                 AgentFileKind::Override
@@ -399,41 +446,6 @@ fn build_tree(
     )
 }
 
-fn summarize_markdown(content: &str) -> String {
-    let mut paragraph = Vec::new();
-    let mut in_fence = false;
-    for line in content.lines() {
-        let trimmed = line.trim();
-        if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
-            in_fence = !in_fence;
-            continue;
-        }
-        if in_fence || trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with("<!--")
-        {
-            if !paragraph.is_empty() {
-                break;
-            }
-            continue;
-        }
-        let clean = trimmed
-            .trim_start_matches(|character: char| matches!(character, '-' | '*' | '>' | ' '));
-        if !clean.is_empty() {
-            paragraph.push(clean);
-        }
-        if paragraph.join(" ").chars().count() >= 180 {
-            break;
-        }
-    }
-    let summary = paragraph.join(" ");
-    if summary.is_empty() {
-        "No prose summary could be inferred from this file.".to_string()
-    } else if summary.chars().count() > 220 {
-        format!("{}…", summary.chars().take(219).collect::<String>())
-    } else {
-        summary
-    }
-}
-
 fn relative_display(root: &Path, path: &Path) -> String {
     path.strip_prefix(root)
         .unwrap_or(path)
@@ -522,14 +534,31 @@ mod tests {
         let scan = scan_project(temp.path()).unwrap();
 
         assert_eq!(scan.scanned_files, 0);
+        assert!(scan.project_entries.is_empty());
     }
 
     #[test]
-    fn summarizes_first_prose_paragraph_without_mutating_source() {
-        let content = "# Backend agent\n\nKeeps API behavior stable.\nStill part of the summary.\n\n## Rules\nMore text.";
-        assert_eq!(
-            summarize_markdown(content),
-            "Keeps API behavior stable. Still part of the summary."
-        );
+    fn reports_project_entries_and_reads_markdown_only() {
+        let temp = tempdir().unwrap();
+        create_dir_all(temp.path().join("src/components")).unwrap();
+        write(temp.path().join("src/main.ts"), "ordinary source").unwrap();
+        write(temp.path().join("src/components/Button.tsx"), "button").unwrap();
+        write(temp.path().join("README.MD"), "# Read me").unwrap();
+
+        let scan = scan_project(temp.path()).unwrap();
+        let markdown = scan
+            .project_entries
+            .iter()
+            .find(|entry| entry.relative_path == "README.MD")
+            .unwrap();
+        let source = scan
+            .project_entries
+            .iter()
+            .find(|entry| entry.relative_path == "src/main.ts")
+            .unwrap();
+
+        assert_eq!(markdown.kind, ProjectEntryKind::File);
+        assert_eq!(markdown.markdown_content.as_deref(), Some("# Read me"));
+        assert_eq!(source.markdown_content, None);
     }
 }

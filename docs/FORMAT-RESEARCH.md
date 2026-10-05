@@ -30,7 +30,7 @@ It does not interpret headings, prose links, or words such as “delegate” as 
 1. **“Agent” identity.** An `AGENTS.md` file configures work in a scope; it does not necessarily define a named or independently runnable agent.
 2. **Parent/child semantics.** Directory nesting establishes applicable instruction scope, not delegation, orchestration, or a runtime handoff.
 3. **Sibling or cross-tree relationships.** Free-form Markdown may mention other folders or agents, but there is no documented link schema to parse reliably.
-4. **Summary fields.** `AGENTS.md` has no required title or purpose property. The MVP extracts the first prose paragraph and labels it as inferred.
+4. **Summary fields.** `AGENTS.md` has no required title or purpose property. The MVP does not infer a summary from headings or prose.
 5. **Override precedence details.** A directory containing both base and override files needs a deliberate product representation. The MVP discovers both rather than claiming an effective merged result.
 6. **Fallback filenames and size limits.** Codex may be configured with fallback names and a byte cap. Those values are environment configuration, not repository-wide constants, so the MVP does not guess them.
 7. **Skill placement.** Skills can be made available through several capability/plugin mechanisms. Mere physical containment does not prove an explicit association with an `AGENTS.md`; AgentStudio presents nearest-scope association as inferred.

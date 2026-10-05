@@ -35,9 +35,10 @@ Software distribution is separate from project scanning. On startup, Tauri's upd
 - `agents` is a nested list of `AgentNode` records;
 - `unscopedSkills` holds skills with no containing agent instruction scope;
 - `diagnostics` reports recoverable filesystem errors;
+- `projectEntries` provides relative file and directory paths for repository context, plus raw content for case-insensitive `.md` files;
 - `scannedFiles` supports basic scan feedback.
 
-`AgentNode` represents an instruction source, not a running AI agent. It preserves `rawContent`, has a filesystem `scope`, contains associated skills and child nodes, and records the evidence behind its parent relationship. The React explorer presents these records as instruction files within folder scopes; that presentation does not add new filesystem facts to the DTO.
+`AgentNode` represents an instruction source, not a running AI agent. It preserves `rawContent`, has a filesystem `scope`, contains associated skills and child nodes, and records the evidence behind its parent relationship. The React explorer derives a repository tree from `projectEntries`, cross-references supported sources by relative path, and distinguishes AGENTS, SKILL, ordinary Markdown, and context-only entries.
 
 `SkillDefinition` preserves its raw file and all YAML front matter as an open object. Known fields are projected into `name` and `description`; unknown fields remain available for future adapters.
 
@@ -72,8 +73,8 @@ Editing must start from the original bytes/text and apply the smallest user-appr
 
 - Rust performs discovery because it is the trusted native boundary and can later support safe writes.
 - Raw source is first-class because round-trip preservation is a product requirement.
-- Summaries are deterministic local extracts, not AI-generated text. This keeps scans private, fast, and reproducible.
 - Markdown rendering is a read-only presentation of `rawContent`; the source view remains available and raw HTML is not enabled.
+- Case-insensitive `.md` files are readable in the detail viewer. Other ordinary project files contribute path metadata only and remain non-interactive.
 - Saved project entries contain local paths and display names only. Removing one from the sidebar does not delete or modify its directory.
 - Generated/dependency folders (`.git`, `node_modules`, `target`, `.next`, `dist`) are skipped. Configurable ignore rules are deferred.
 - Symlinks are not followed, preventing accidental traversal outside the selected project and cycles.

@@ -8,13 +8,13 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { AlertTriangle, FolderOpen, Network, PanelLeftClose, PanelLeftOpen, ScanLine, ShieldCheck, Sparkles } from "lucide-react";
+import { AlertTriangle, FileKey2, FileText, FolderOpen, Network, PanelLeftClose, PanelLeftOpen, ScanLine, ShieldCheck, Sparkles } from "lucide-react";
 import { scanProject } from "./api";
 import { AgentExplorer } from "./components/AgentExplorer";
 import { InstructionDocument } from "./components/InstructionDocument";
 import { ProjectSidebar, type SavedProject } from "./components/ProjectSidebar";
 import { UpdateNotice } from "./components/UpdateNotice";
-import type { AgentNode, ProjectScan } from "./model";
+import type { AgentNode, ProjectScan, SkillDefinition } from "./model";
 
 const PROJECTS_KEY = "agent-studio.projects.v1";
 const ACTIVE_PROJECT_KEY = "agent-studio.active-project.v1";
@@ -23,6 +23,7 @@ const STRUCTURE_WIDTH_KEY = "agent-studio.structure-pane-width.v1";
 const STRUCTURE_MIN_WIDTH = 240;
 const STRUCTURE_MAX_WIDTH = 640;
 const STRUCTURE_DEFAULT_WIDTH = 340;
+const OVERVIEW_ID = "__project-overview__";
 
 function loadStructureWidth(): number {
   const stored = localStorage.getItem(STRUCTURE_WIDTH_KEY);
@@ -35,6 +36,18 @@ function loadStructureWidth(): number {
 
 function allAgents(agents: AgentNode[]): AgentNode[] {
   return agents.flatMap((agent) => [agent, ...allAgents(agent.children)]);
+}
+
+function allSkills(agents: AgentNode[]): SkillDefinition[] {
+  return agents.flatMap((agent) => [...agent.skills, ...allSkills(agent.children)]);
+}
+
+function skillOwner(agents: AgentNode[], skillId: string): AgentNode | undefined {
+  for (const agent of agents) {
+    if (agent.skills.some((skill) => skill.id === skillId)) return agent;
+    const owner = skillOwner(agent.children, skillId);
+    if (owner) return owner;
+  }
 }
 
 function loadProjects(): SavedProject[] {
@@ -66,8 +79,15 @@ export default function App() {
 
   const scan = activeRoot ? scans[activeRoot] : undefined;
   const agents = useMemo(() => (scan ? allAgents(scan.agents) : []), [scan]);
-  const selected = agents.find((agent) => agent.id === (activeRoot ? selectedIds[activeRoot] : undefined)) ?? agents[0];
-  const parent = selected?.parentId ? agents.find((agent) => agent.id === selected.parentId) : undefined;
+  const skills = useMemo(() => (scan ? [...allSkills(scan.agents), ...scan.unscopedSkills] : []), [scan]);
+  const selectedId = activeRoot ? selectedIds[activeRoot] : undefined;
+  const selectedAgent = agents.find((agent) => agent.id === selectedId);
+  const selectedSkill = skills.find((skill) => skill.id === selectedId);
+  const selectedMarkdown = !selectedAgent && !selectedSkill
+    ? scan?.projectEntries.find((entry) => entry.kind === "file" && entry.relativePath === selectedId && entry.relativePath.toLowerCase().endsWith(".md"))
+    : undefined;
+  const selectedSkillOwner = selectedSkill && scan ? skillOwner(scan.agents, selectedSkill.id) : undefined;
+  const parent = selectedAgent?.parentId ? agents.find((agent) => agent.id === selectedAgent.parentId) : undefined;
 
   useEffect(() => {
     localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
@@ -116,7 +136,7 @@ export default function App() {
       });
       setActiveRoot(result.root);
       const first = allAgents(result.agents)[0];
-      setSelectedIds((current) => ({ ...current, [result.root]: current[result.root] ?? first?.id }));
+      setSelectedIds((current) => ({ ...current, [result.root]: current[result.root] ?? first?.id ?? OVERVIEW_ID }));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -239,24 +259,23 @@ export default function App() {
                     >
                       {isSidebarOpen ? <PanelLeftClose size={17} /> : <PanelLeftOpen size={17} />}
                     </button>
-                    <span>Project structure</span>
+                    <span>Repository</span>
                   </div>
-                  <span>{agents.length} scopes</span>
+                  <span>{scan.projectEntries.length} entries</span>
                 </div>
-                {scan.agents.length ? (
+                {scan.projectEntries.length ? (
                   <AgentExplorer
-                    agents={scan.agents}
-                    selectedId={selected?.id}
-                    onSelect={(agent) => activeRoot && setSelectedIds((current) => ({ ...current, [activeRoot]: agent.id }))}
+                    entries={scan.projectEntries}
+                    agents={agents}
+                    skills={skills}
+                    selectedId={selectedAgent?.id ?? selectedSkill?.id ?? selectedMarkdown?.relativePath}
+                    onSelectAgent={(agent) => activeRoot && setSelectedIds((current) => ({ ...current, [activeRoot]: agent.id }))}
+                    onSelectSkill={(skill) => activeRoot && setSelectedIds((current) => ({ ...current, [activeRoot]: skill.id }))}
+                    onSelectMarkdown={(entry) => activeRoot && setSelectedIds((current) => ({ ...current, [activeRoot]: entry.relativePath }))}
+                    onSelectOverview={() => activeRoot && setSelectedIds((current) => ({ ...current, [activeRoot]: OVERVIEW_ID }))}
                   />
                 ) : (
-                  <div className="empty-panel">No AGENTS.md files were found in this project.</div>
-                )}
-                {scan.unscopedSkills.length > 0 && (
-                  <div className="unscoped-skills">
-                    <p>Unscoped project skills</p>
-                    {scan.unscopedSkills.map((skill) => <div className="skill-row" key={skill.id}><Sparkles size={13} />{skill.name}</div>)}
-                  </div>
+                  <div className="empty-panel">No files were found in this project.</div>
                 )}
               </aside>
 
@@ -284,34 +303,100 @@ export default function App() {
               </div>
 
               <article className="detail-panel">
-                {selected ? (
+                {selectedAgent ? (
                   <>
                     <div className="detail-heading">
                       <div>
-                        <div className="detail-kicker">{selected.fileKind === "override" ? "Override instructions" : "Scoped instructions"}</div>
-                        <h2>{selected.name}</h2>
-                        <p>{selected.summary}</p>
+                        <h2>{selectedAgent.name}</h2>
                       </div>
-                      <span className={`file-kind ${selected.fileKind}`}>{selected.fileKind === "override" ? "Override" : "AGENTS.md"}</span>
+                      <span className={`file-kind ${selectedAgent.fileKind}`}>{selectedAgent.fileKind === "override" ? "Override" : "AGENTS.md"}</span>
                     </div>
 
                     <dl className="relationship-grid">
-                      <div><dt>Applies to</dt><dd><code>{selected.scope}</code></dd></div>
+                      <div><dt>Applies to</dt><dd><code>{selectedAgent.scope}</code></dd></div>
                       <div><dt>Inherited from</dt><dd>{parent ? parent.name : "Project root"}</dd></div>
-                      <div><dt>Child scopes</dt><dd>{selected.children.length}</dd></div>
-                      <div><dt>Skills in scope</dt><dd>{selected.skills.length}</dd></div>
+                      <div><dt>Child scopes</dt><dd>{selectedAgent.children.length}</dd></div>
+                      <div><dt>Skills in scope</dt><dd>{selectedAgent.skills.length}</dd></div>
                     </dl>
 
-                    {selected.relationship && (
+                    {selectedAgent.relationship && (
                       <div className="relationship-note">
-                        <span>Inferred relationship</span>{selected.relationship.reason}
+                        <span>Inferred relationship</span>{selectedAgent.relationship.reason}
                       </div>
                     )}
 
-                    <InstructionDocument key={selected.id} content={selected.rawContent} />
+                    <InstructionDocument key={selectedAgent.id} content={selectedAgent.rawContent} label="Instruction content" />
+                  </>
+                ) : selectedSkill ? (
+                  <>
+                    <div className="detail-heading">
+                      <div>
+                        <h2>{selectedSkill.name}</h2>
+                        <p>{selectedSkill.description ?? "This skill does not provide a description."}</p>
+                      </div>
+                      <span className="file-kind skill">Skill</span>
+                    </div>
+
+                    <dl className="relationship-grid skill-facts">
+                      <div><dt>File</dt><dd><code>{selectedSkill.relativePath}</code></dd></div>
+                      <div><dt>Directory</dt><dd><code>{selectedSkill.directory || "."}</code></dd></div>
+                      <div><dt>Associated scope</dt><dd>{selectedSkillOwner?.name ?? "No containing AGENTS.md"}</dd></div>
+                      <div><dt>Metadata fields</dt><dd>{Object.keys(selectedSkill.frontmatter).length}</dd></div>
+                    </dl>
+
+                    {selectedSkill.diagnostics.length > 0 && (
+                      <div className="source-diagnostics" role="status">
+                        <AlertTriangle size={16} />
+                        <div><strong>Skill diagnostics</strong>{selectedSkill.diagnostics.map((diagnostic) => <span key={diagnostic}>{diagnostic}</span>)}</div>
+                      </div>
+                    )}
+
+                    <InstructionDocument key={selectedSkill.id} content={selectedSkill.rawContent} label="Skill content" />
+                  </>
+                ) : selectedMarkdown ? (
+                  <>
+                    <div className="detail-heading">
+                      <div><h2>{selectedMarkdown.relativePath.split("/").at(-1)}</h2></div>
+                      <span className={`file-kind ${selectedMarkdown.relativePath.split("/").at(-1)?.toLowerCase() === "readme.md" ? "readme" : "markdown"}`}>
+                        {selectedMarkdown.relativePath.split("/").at(-1)?.toLowerCase() === "readme.md" ? "README" : "Markdown"}
+                      </span>
+                    </div>
+
+                    <dl className="relationship-grid markdown-facts">
+                      <div><dt>File</dt><dd><code>{selectedMarkdown.relativePath}</code></dd></div>
+                      <div><dt>Folder</dt><dd><code>{selectedMarkdown.relativePath.split("/").slice(0, -1).join("/") || "."}</code></dd></div>
+                      <div><dt>Format</dt><dd>Markdown</dd></div>
+                      <div><dt>Access</dt><dd>Read only</dd></div>
+                    </dl>
+
+                    {selectedMarkdown.markdownContent !== undefined ? (
+                      <InstructionDocument key={selectedMarkdown.relativePath} content={selectedMarkdown.markdownContent} label="Markdown content" />
+                    ) : (
+                      <div className="source-diagnostics" role="status">
+                        <AlertTriangle size={16} />
+                        <div><strong>Unable to read this Markdown file</strong><span>{scan.diagnostics.find((diagnostic) => diagnostic.path === selectedMarkdown.relativePath)?.message ?? "The file did not provide readable text."}</span></div>
+                      </div>
+                    )}
                   </>
                 ) : (
-                  <div className="empty-detail"><ScanLine size={28} /><h2>No instruction source selected</h2><p>Choose one from the project structure.</p></div>
+                  <section className="project-overview">
+                    <div className="overview-heading">
+                      <div className="overview-mark"><Network size={22} /></div>
+                      <div><h2>{scan.projectName}</h2><p>Repository context with instruction sources and skills highlighted.</p></div>
+                    </div>
+                    <p className="overview-explanation">AgentStudio shows every discovered file and folder for orientation. Markdown files are readable; other file types remain context only.</p>
+                    <dl className="overview-facts">
+                      <div><dt>Folders</dt><dd>{scan.projectEntries.filter((entry) => entry.kind === "directory").length}</dd></div>
+                      <div><dt>Files</dt><dd>{scan.projectEntries.filter((entry) => entry.kind === "file").length}</dd></div>
+                      <div><dt>Instruction sources</dt><dd>{agents.length}</dd></div>
+                      <div><dt>Skills</dt><dd>{skills.length}</dd></div>
+                    </dl>
+                    <div className="overview-guidance">
+                      <div><FileKey2 size={18} /><span><strong>AGENTS files</strong> define directory-scoped project guidance.</span></div>
+                      <div><Sparkles size={18} /><span><strong>Skills</strong> are separate reusable instruction packages and can be opened directly.</span></div>
+                      <div><FileText size={18} /><span><strong>Other Markdown</strong> provides project context without being treated as agent guidance.</span></div>
+                    </div>
+                  </section>
                 )}
               </article>
             </div>

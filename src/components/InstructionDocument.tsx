@@ -5,13 +5,14 @@ import remarkGfm from "remark-gfm";
 
 interface Props {
   content: string;
+  label?: string;
 }
 
-export function InstructionDocument({ content }: Props) {
+export function InstructionDocument({ content, label = "Instruction content" }: Props) {
   const [mode, setMode] = useState<"read" | "source">("read");
 
   return (
-    <section className="instruction-document" aria-label="Instruction content">
+    <section className="instruction-document" aria-label={label}>
       <div className="document-toolbar">
         <div className="view-switch" role="group" aria-label="Content view">
           <button className={mode === "read" ? "active" : ""} onClick={() => setMode("read")}>

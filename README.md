@@ -1,6 +1,6 @@
 # AgentStudio
 
-AgentStudio is an open-source, local-first Windows desktop explorer for repository agent instructions and skills. It keeps a local sidebar of projects, scans the selected project without writing to it, and presents supported instruction sources as a readable filesystem scope hierarchy.
+AgentStudio is an open-source, local-first Windows desktop explorer for repository agent instructions and skills. It keeps a local sidebar of projects, scans the selected project without writing to it, and presents supported instruction sources within the surrounding repository structure.
 
 ## Current scope
 
@@ -10,9 +10,12 @@ Supported in the first slice:
 - case-insensitive `SKILL.md` files with YAML front matter;
 - nearest-ancestor agent relationships inferred from filesystem scope;
 - skill metadata (`name`, `description`, and unknown front-matter fields);
+- a repository tree with an **All files** view for context and a **Guidance** view containing every Markdown file;
+- selectable skill documents with metadata, diagnostics, rendered Markdown, and source views;
+- selectable case-insensitive `.md` files with distinct AGENTS, SKILL, README, and Markdown icons plus read-only rendered/source views;
 - a collapsible, persistent local project sidebar with add, remove, switch, and rescan actions;
 - an adjustable split view between project structure and instruction content;
-- rendered Markdown guidance with an explicit read-only source view;
+- rendered Markdown documents with an explicit read-only source view;
 - non-fatal parse diagnostics;
 - signed update checks against public GitHub Releases, with user-controlled installation.
 

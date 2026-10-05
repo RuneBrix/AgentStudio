@@ -21,7 +21,6 @@ export interface AgentNode {
   name: string;
   relativePath: string;
   scope: string;
-  summary: string;
   rawContent: string;
   fileKind: "agents" | "override";
   parentId?: string;
@@ -36,11 +35,18 @@ export interface ScanDiagnostic {
   message: string;
 }
 
+export interface ProjectEntry {
+  relativePath: string;
+  kind: "directory" | "file";
+  markdownContent?: string;
+}
+
 export interface ProjectScan {
   root: string;
   projectName: string;
   agents: AgentNode[];
   unscopedSkills: SkillDefinition[];
   diagnostics: ScanDiagnostic[];
+  projectEntries: ProjectEntry[];
   scannedFiles: number;
 }
