@@ -42,7 +42,7 @@ npm run build
 
 The installed app checks `RuneBrix/AgentStudio` GitHub Releases once at startup. A failed check is silent; when a newer signed version exists, the app offers to install it and restart. Project paths and scan results are never sent with this request.
 
-Before the first release, add the ignored `.tauri/agentstudio.key` file contents as the repository secret `TAURI_SIGNING_PRIVATE_KEY`. Keep a secure backup: existing installations cannot trust future updates if the key is lost. Then update the matching versions in `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json`, commit them, and push a matching tag such as `v0.2.0`. The release workflow builds a Windows NSIS installer and a draft GitHub Release; publishing that draft makes its generated `latest.json` available to installed apps.
+Before the first release, add the ignored `.tauri/agentstudio.key` file contents as the repository secret `TAURI_SIGNING_PRIVATE_KEY`. Keep a secure backup: existing installations cannot trust future updates if the key is lost. For completed product changes, increment the patch version by default, align `package.json`, `package-lock.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, and `src-tauri/tauri.conf.json`, commit them, and push a matching tag such as `v0.2.0`. The release workflow builds a Windows NSIS installer, publishes the GitHub Release, and exposes its generated `latest.json` to installed apps.
 
 ## Safety posture
 

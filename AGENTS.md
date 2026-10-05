@@ -47,6 +47,8 @@ Do not make a plugin mandatory for ordinary local development unless the reposit
 
 Consult `docs/MAINTENANCE.md` for the change-impact matrix. Update documentation and scoped guidance in the same change when behavior, architecture, supported formats, safety properties, setup, or verification commands change. Do not churn Markdown when the change has no user- or contributor-facing impact.
 
+When the user asks to push completed product changes to GitHub, default to a patch release instead of a plain push: update the aligned versions in `package.json`, `package-lock.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, and `src-tauri/tauri.conf.json`; run the release checks; commit and push the branch; then create and push the matching `vX.Y.Z` tag and verify that GitHub published the release. Follow an explicitly requested version or non-release push instead.
+
 Run the relevant checks:
 
 ```powershell
